@@ -18,3 +18,5 @@
 4. [简历与面试证据](RESUME.md)。
 
 当前范围：先做局部视觉正确性与存储共享；CFG scheduler、在线生图/TTS、depth graph/TP 和 Ascend 分开推进。上游 PR 未合并时，不能从本代码分支直接向 upstream/main 开一个重复的全模型 PR。
+
+本次实际基线：`docs` 已基于 `9bc166cd5`；`roadmap` 保留创建时的 `9f5521351`。对 roadmap 的 rebase 被自动审批以未明确授权历史改写为由拒绝，因此保留原历史。该分支只新增本目录材料，正文里的最新模型分析仍固定 #5299 `c90ebc1d07ba`；它不用于上游代码 PR。
