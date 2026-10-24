@@ -759,7 +759,7 @@ class LongcatNextForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
         base = int(self.audio_offset_vals[0].item())
         total = sum(self.audio_codebook_sizes)
         audio_id_range = torch.arange(base, base + total, device=device, dtype=torch.long)
-        emb = self.model.embed_tokens(audio_id_range).detach().float()
+        emb = self.model.embed_tokens(audio_id_range).detach()
         self.register_buffer(
             "_replicated_audio_code_embedding", emb.to(device=device, dtype=self.dtype), persistent=False
         )
@@ -779,9 +779,8 @@ class LongcatNextForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
         if module is not None:
             return module
         rows = self._ensure_replicated_audio_code_embedding(device)
-        module = nn.Embedding(rows.shape[0], rows.shape[1], _weight=rows.detach().clone())
-        module = module.to(device=device, dtype=self.dtype)
-        module.requires_grad_(False)
+        # Both inference lookups are read-only; reuse the cached storage.
+        module = nn.Embedding.from_pretrained(rows, freeze=True)
         holder["module"] = module
         return module
 
@@ -797,7 +796,7 @@ class LongcatNextForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
         base = int(self.visual_offset_vals[0].item())
         total = sum(self.visual_codebook_sizes)
         visual_id_range = torch.arange(base, base + total, device=device, dtype=torch.long)
-        emb = self.model.embed_tokens(visual_id_range).detach().float()
+        emb = self.model.embed_tokens(visual_id_range).detach()
         self.register_buffer(
             "_replicated_visual_code_embedding", emb.to(device=device, dtype=self.dtype), persistent=False
         )
@@ -812,9 +811,8 @@ class LongcatNextForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
         if module is not None:
             return module
         rows = self._ensure_replicated_visual_code_embedding(device)
-        module = nn.Embedding(rows.shape[0], rows.shape[1], _weight=rows.detach().clone())
-        module = module.to(device=device, dtype=self.dtype)
-        module.requires_grad_(False)
+        # Same storage as the cached rows, without another full-table copy.
+        module = nn.Embedding.from_pretrained(rows, freeze=True)
         holder["module"] = module
         return module
 
