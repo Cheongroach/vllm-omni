@@ -958,9 +958,9 @@ class LongcatNextForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
         """Depth-head sampling for audio_head/visual_head (same checkpoint
         class, hardcoded cuda:0), via the shared rank-0+broadcast loop.
 
-        mask_sentinel zeroes the level-0 end-of-image class for the visual
-        head so the grid bound in _advance_visual_gen is the sole
-        terminator. mask_audio_sentinels zeroes each level >= 1's own
+        mask_sentinel excludes each visual level's extra class from the
+        quantized-code domain; the grid bound in _advance_visual_gen is
+        the sole image terminator. mask_audio_sentinels zeroes each level >= 1's own
         sentinel class -- the depth head emits a +1 sentinel per level, but
         only level-0's is the real chunk-end marker; a non-zero-level
         sentinel would OOB the VQ codebook gather at decode time.
@@ -971,8 +971,8 @@ class LongcatNextForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
             return head(hid, cum_ids.to(hid.device), code_embed, level)[0]
 
         def sentinel_fn(level: int) -> int | None:
-            if mask_sentinel and level == 0:
-                return self.visual_codebook_sizes[0]
+            if mask_sentinel:
+                return self.visual_codebook_sizes[level]
             if mask_audio_sentinels and level >= 1:
                 return self.audio_codebook_sizes[level]
             return None
@@ -1028,9 +1028,9 @@ class LongcatNextForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
             return cfg_scale * (cond_logits - uncond_logits) + uncond_logits
 
         def sentinel_fn(level: int) -> int | None:
-            # Masked so the image can never self-terminate early -- the
-            # grid bound in _advance_visual_gen is the terminator.
-            return self.visual_codebook_sizes[0] if level == 0 else None
+            # Each level has an extra class outside its quantized-code domain.
+            # The grid bound in _advance_visual_gen terminates the image.
+            return self.visual_codebook_sizes[level]
 
         return self._sample_depth_codes(
             offset_vals,
@@ -1372,7 +1372,7 @@ class LongcatNextForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
                     # and applied to both rows.
                     text_tok = input_ids[p_row : p_row + 1]
                     text_emb = self.model.embed_tokens(text_tok)
-                    if frame_kept and deoff != 0:
+                    if frame_kept:
                         offset_codes = (codes_row + self.visual_offset_vals[:visual_num_levels].to(device)).unsqueeze(0)
                         vision_emb = self._code_embeddings(offset_codes)
                         vision_emb = self.visual_tokenizer.visual_embedding_layer(vision_emb.to(self.dtype))
@@ -1433,7 +1433,7 @@ class LongcatNextForCausalLM(nn.Module, SupportsMultiModal, SupportsPP):
                 text_tok = input_ids[row : row + 1]
                 text_emb = self.model.embed_tokens(text_tok)
 
-                if frame_kept and deoff != 0:
+                if frame_kept:
                     # Reuses the understanding-direction path (_encode_images).
                     offset_codes = (codes_row + self.visual_offset_vals[:visual_num_levels].to(device)).unsqueeze(0)
                     vision_emb = self._code_embeddings(offset_codes)
