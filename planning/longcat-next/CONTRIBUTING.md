@@ -12,7 +12,7 @@ git config remote.pushDefault origin
 git config branch.main.pushRemote origin
 ```
 
-本次上游 `main` 固定 `9bc166cd556cdaa4e0b18543da0c2def0076275e`，代码基线固定 #5299 `c90ebc1d07ba8c0b583586a1eddf91f531047bce`。由于普通 Git 拉取超时，已通过 GitHub 官方快照/API 验证 tree 与 commit SHA 后导入；本地采用浅历史边界，并保留 `backup/main-20261024`。这保证文件快照，历史完整性仍需在网络正常时补齐。
+研究时的上游 `main` 为 `9bc166cd556cdaa4e0b18543da0c2def0076275e`，代码基线固定 #5299 `c90ebc1d07ba8c0b583586a1eddf91f531047bce`。2026-10-25 fork main 已同步到 `dca119877bd420ee0abc117e637eeac7aa28e4dd`，三个 LongCat-Next 分支已推送。研究和计划分支保留原基线，不改写历史。普通 Git 拉取曾超时，因此此前通过 GitHub 官方快照/API 核对 tree 与 commit SHA 后导入；本地采用浅历史边界，并保留 `backup/main-20261024`。完整历史仍需在网络正常时补齐。
 
 以后正常同步：
 
@@ -25,7 +25,7 @@ git push origin main
 
 若提示 shallow history，先 `git fetch --unshallow upstream`，不要为省事把 main 强推覆盖。若 fork 已有自己的 main 提交，先检查 divergence，另开分支保留，再决定同步；不要擅自删除历史。
 
-当前 OAuth 曾因缺 `workflow` scope 拒绝 fork 同步。用户在自己的终端完成 `gh auth refresh -h github.com -s workflow` 后才能重试涉及 workflow 的更新。不要删 workflow 或绕过授权以强行同步。
+OAuth 曾因缺 `workflow` scope 拒绝 fork 同步；用户补充授权后，本次同步已成功。如果以后遇到同类权限错误，可执行 `gh auth refresh -h github.com -s workflow`。不要删 workflow 或绕过授权以强行同步。
 
 ## 代码如何送到上游
 
