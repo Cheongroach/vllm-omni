@@ -6,7 +6,7 @@
 
 | 对象 | 固定版本 |
 | --- | --- |
-| vLLM-Omni 上游 main 查询结果 | `9bc166cd556cdaa4e0b18543da0c2def0076275e` |
+| 2026-10-24 研究时的上游 main | `9bc166cd556cdaa4e0b18543da0c2def0076275e` |
 | 上游 LongCat-Next PR #5299 | `c90ebc1d07ba8c0b583586a1eddf91f531047bce` |
 | 官方 LongCat-Next-inference | `70ab100beecaaa77c1f45c0cf9ec89a4faf20fd8` |
 | 官方 SGLang-FluentLLM submodule | `d97603b2ac3487c733d611d0456005ba3f23602d` |
@@ -20,7 +20,7 @@
 - [讲解手稿](manuscript.md)：适合源码讲解与面试的叙述顺序。
 - [会话整理](conversation.md)：用户问题原文摘录与回答摘要；不是原始工具日志或逐字全量导出。
 - [代码验证](VALIDATION.md)：两个提交、基线失败/修复通过、实际验证边界与复验命令。
-- [分支与交接](HANDOFF.md)：实际分支基线、远端授权阻塞和剩余推送步骤。
+- [分支与交接](HANDOFF.md)：实际分支基线、推送结果和远端核对命令。
 
 证据口径：
 

@@ -1,12 +1,12 @@
 # 分支与交接
 
-日期：2026-10-24。目标 fork：`https://github.com/Cheongroach/vllm-omni`。
+更新：2026-10-25。目标 fork：`https://github.com/Cheongroach/vllm-omni`。
 
 ## 已完成
 
 | 分支 | 基线 | 内容 |
 | --- | --- | --- |
-| `main` | 上游 `9bc166cd5` | 本地已同步；旧 head 备份为 `backup/main-20261024` |
+| `main` | 当前上游 `dca119877b` | fork 与本地均已同步；旧 head 备份为 `backup/main-20261024` 和 `backup/main-20261025` |
 | `longcat-next/code` | #5299 `c90ebc1d07ba` | `b56c2a94b` 视觉正确性；`53785219b` 存储共享；只有模型与两份测试变更 |
 | `longcat-next/docs` | 上游 `9bc166cd5` | 研究、审查、手稿、会话摘要、验证与本交接 |
 | `longcat-next/roadmap` | 旧本地 `9f5521351` | TODO、验收、分支/issue/PR、草稿、简历 |
@@ -16,44 +16,31 @@
 
 代码 diff 为 3 文件、+148/-18；16 项新用例在基线 10 失败/6 通过，修复后连同既有 talker 用例共 72 通过。详见 [验证](VALIDATION.md)。
 
-## 远端尚未完成
+## 远端推送已完成
 
-GitHub 拒绝 fork `main` 同步，原错误：
+用户补充 `workflow` 授权后，GitHub 已成功 fast-forward fork main 到 `dca119877bd420ee0abc117e637eeac7aa28e4dd`。三个分支已推送并通过 GitHub Git refs API 核对：代码分支 `53785219b3c087f9e498ca2ed07088c9407fe037`，研究和计划分支与各自本地提交一致。文档状态更新会追加普通提交，不改写既有历史。
 
-> refusing to allow an OAuth App to create or update workflow `.github/workflows/build_wheel.yml` without `workflow` scope
+三个 LongCat-Next 分支均跟踪 `origin` 下的同名分支；main 继续跟踪 `upstream/main`。完整最终 SHA 清单与核对时间保存在交付包 `manifest.json`。
 
-当前令牌 scopes 包含 `repo`，不包含 `workflow`。本次本地成果已提交，但 fork main 与三个新分支没有成功推送；不能将“本地 commit”称作“已提交到 GitHub”。
-
-用户在自己的终端为 GitHub 补充授权：
+重新核对远端：
 
 ```bash
-gh auth refresh -h github.com -s workflow
-```
-
-完成后重新检查身份和 scope；如果使用不同客户端管理 GitHub 授权，也可在该客户端完成等效授权。不要在会话粘贴 token。
-
-授权后剩余步骤：
-
-```bash
-gh api -X POST repos/Cheongroach/vllm-omni/merge-upstream -f branch=main
-git push origin \
-  longcat-next/code \
-  longcat-next/docs \
-  longcat-next/roadmap
 git ls-remote origin \
   refs/heads/main \
   refs/heads/longcat-next/code \
   refs/heads/longcat-next/docs \
   refs/heads/longcat-next/roadmap
+gh api repos/Cheongroach/vllm-omni/git/matching-refs/heads \
+  --jq '.[] | select(.ref == "refs/heads/main" or (.ref | startswith("refs/heads/longcat-next/"))) | [.ref,.object.sha] | @tsv'
 ```
 
-如出现分支冲突先查明远端更新，不强推。成功后核对四条 remote OID 与本地，并给三个分支设 origin tracking。推送 fork 已获用户授权；不需要另开上游 issue/PR 或给作者发消息。
+代码、研究和计划分支继续保持原始基线。此次没有向上游或作者发送消息、评论，也没有创建 issue/PR。后续推送如出现冲突先核查，不强推。
 
 ## 历史整理限制
 
 `docs` 的 rebase 已完成。对 `roadmap` 的同类 rebase 被自动审批拒绝，理由是没有明确授权该分支的历史改写。保留其旧基线；这不影响读取材料或推送现有分支。后续没有必要仅为文档基线一致重写历史。
 
-main/当前 PR 快照通过官方 GitHub API/tarball 导入，并核对 commit/tree SHA。浅历史边界不能当作全量 history；正常网络下可补齐。
+原 main/当前 PR 快照通过官方 GitHub API/tarball 导入，并核对 commit/tree SHA。本次 Git 拉取和 tarball 下载均超时，本地同步改用 GitHub Git objects API，只下载缺失对象并核对所有 blob/tree 和原签名 commit SHA。浅历史边界不能当作全量 history；正常网络下可补齐。
 
 ## 阅读顺序与贡献策略
 
