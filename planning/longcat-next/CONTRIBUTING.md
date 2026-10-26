@@ -1,5 +1,7 @@
 # 分支、issue、PR 与接受度
 
+先读[贡献流程阅读版](CONTRIBUTING-friendly.md)理解 fork、依赖与投稿路径。本文件保留命令和历史操作记录。
+
 ## 本次布局
 
 `origin` 是 `Cheongroach/vllm-omni`，`upstream` 是 `vllm-project/vllm-omni`。`main` 跟踪上游，默认推送目标是个人 fork。代码、研究、计划分别在独立 worktree，避免频繁切分支时带入实验目录。

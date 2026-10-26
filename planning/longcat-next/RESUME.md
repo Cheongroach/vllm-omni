@@ -1,5 +1,7 @@
 # 简历与面试：成果和证据分开
 
+先读[简历阅读版](RESUME-friendly.md)确认当前可写范围。本文件保留证据表、实验后填空模板与技术追问。
+
 ## 当前可用表述
 
 > 参与 vLLM-Omni LongCat-Next 适配改进，复核 RVQ 逐级采样与多模态反馈契约，修复普通/CFG 路径高层额外码采样及合法 code 0 反馈错误；用基线失败、修复通过的 CPU 回归覆盖采样与换行边界。共享 depth-head 与 replicated code embedding 的冻结 storage，消除第二份表；在 BF16、hidden=3072 且初始化两模态表时理论减少 882 MiB/rank，完整 GPU 复验待完成。
