@@ -4,6 +4,14 @@
 
 ## 从哪里开始读
 
+第一次阅读只打开：
+
+- [一步步认识 LongCat-Next 与 vLLM-Omni 项目](一步步认识LongCat-Next与vLLM-Omni项目-friendly.md)
+
+它跟随一次图像生成请求，按 62 步依次解释两阶段流水线、8 级 RVQ、两项局部修复、CFG pair、四卡布局和证据边界。默认读者已理解 Embedding、Attention、KV Cache 和常见并行，不重复这些基础知识。
+
+读完主线后，再按问题查下面的专题材料。
+
 | 想了解什么 | 先读阅读版 | 需要源码或历史细节时 |
 | --- | --- | --- |
 | 模型与框架怎样对应 | [模型分析](analysis-friendly.md) | [技术原稿](analysis.md) |
