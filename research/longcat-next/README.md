@@ -12,6 +12,7 @@
 | 当前交付与分支在哪里 | [交接](HANDOFF-friendly.md) | [历史核对记录](HANDOFF.md) |
 | 如何讲解这项工作 | [源码讲解手稿](manuscript.md) | 分析与验证原稿 |
 | 这组材料如何回答用户问题 | [会话阅读版](conversation-friendly.md) | [问题摘录](conversation.md) |
+| 怎样从小修复推进为系统贡献 | [工程升级](upgrade-friendly.md) | [原调查与环境限制](upgrade.md) |
 
 阅读版文件带 `-friendly`，为第一次接触这项工作的读者先解释术语和例子。手稿与索引直接整理并保留原名；技术原稿保存精确证据与引用。
 
