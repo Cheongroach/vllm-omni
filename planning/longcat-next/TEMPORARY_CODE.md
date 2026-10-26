@@ -1,28 +1,26 @@
 # LongCat-Next 临时代码说明
 
-> **TEMPORARY / 临时代码：仅保存在个人 fork，供仓库所有者审阅。需要后续整改与完整验证，不是正式上游提交，也不是生产可用性声明。**
+这条分支是临时代码，保存在个人 fork 供审阅。两项局部修复已经实现，但 CFG 配对调度与完整模型验证尚未完成，不能据此视为生产可用。
 
-更新日期：2026-10-25。代码分支：`longcat-next/code`。
+说明更新：2026-10-26。代码分支：`longcat-next/code`。
 
-## 已上传范围
+## 已经改了什么
 
-基于上游 LongCat-Next 适配 PR #5299 的 `c90ebc1d07ba8c0b583586a1eddf91f531047bce`，保留两项局部修复：
+代码基于模型适配 PR #5299 的 `c90ebc1d07ba8c0b583586a1eddf91f531047bce`。它包含该模型的前置实现，因此不是可以直接独立合入当前 main 的两个小补丁。
 
-| 提交 | 内容 | 证据边界 |
+| 提交 | 解决的问题 | 当前证据 |
 | --- | --- | --- |
-| `b56c2a94b` | 视觉 RVQ 每级屏蔽特殊码，保留合法 code 0 的反馈 | 隔离 CPU 模型逻辑验证 |
-| `53785219b` | 共享 depth embedding 存储，减少重复权重存储 | 隔离 CPU 存储与行为验证 |
+| `b56c2a94b` | 图像每个位置逐级生成 8 个离散码；每级排除特殊编号，合法编号 0 的保留帧继续使用视觉反馈 | 隔离 CPU 采样与反馈验证 |
+| `53785219b` | 深度预测网络与已有缓存读取同一份只读码表，避免再复制一张表 | 隔离 CPU 查值与存储验证 |
 
-既有隔离 CPU 回归共 72 项通过；完整 vLLM runtime、真实权重、GPU、TP 和媒体质量尚未验收。此分支包含 PR #5299 的前置代码，不是从当前 main 可直接独立合入的两个补丁。
+16 项新用例在原代码上 10 项失败、6 项通过；修复后连同 56 项已有用例，共 72 项通过。这些测试用替身代替了部分运行时和深度网络，不覆盖完整 vLLM 初始化、GPU、多卡通信或媒体质量。
 
-## 后续整改
+## 为什么还需要整改
 
-1. 补齐 LongCat-Next CFG 显式配对身份、原子准入和同步推进，禁止缺伴随流或不同逻辑步的两路 hidden 被组合。
-2. 核验 EOS、length、cancel、error 等整对终止路径，以及 KV、模型状态、输出路由和引擎注册表清理。
-3. 解决通用 CFG scheduler 与 LongCat 64K 上下文、token 预算、KV group 的兼容性，不能只加 scheduler 类或静默缩短上下文。
-4. 在真实 runtime 和 GPU/TP 下验证，再与同权重参考实现比较媒体质量及并发性能。
+CFG 生图需要组合有条件与无条件两路预测，两路各有历史缓存，却服务同一个用户请求。当前局部修复没有保证它们从创建到结束始终一起推进；缺少一方或处于不同生成步时，不应继续组合。
 
-详细设计位于个人 fork 的 `longcat-next/draft-cfg-lifecycle` 分支：
-[CFG 生命周期草稿](https://github.com/Cheongroach/vllm-omni/blob/longcat-next/draft-cfg-lifecycle/planning/longcat-next/drafts/cfg-lifecycle.md)。
+后续需要显式记录配对身份、同时满足两路资源、同步生成，并在结束、取消或出错时一起清理缓存与模型状态。通用 CFG 调度器与 LongCat 的 64K 上下文和每轮计算预算存在兼容性限制，不能只换一个类名或缩短上下文来代替验证。
 
-**CFG 生命周期升级尚未实现。** 两项局部修复与设计草稿进入个人 Git 历史，不代表升级完成或允许上游发布。本说明按仓库所有者要求添加；代码与文档由 AI 辅助完成，后续整改和验收状态应随实际证据更新。
+原理与观察先看[CFG 阅读版](https://github.com/Cheongroach/vllm-omni/blob/longcat-next/draft-cfg-lifecycle/planning/longcat-next/drafts/cfg-lifecycle-friendly.md)；实施入口、资源公式和验收条件在[技术草稿](https://github.com/Cheongroach/vllm-omni/blob/longcat-next/draft-cfg-lifecycle/planning/longcat-next/drafts/cfg-lifecycle.md)。
+
+这些代码与材料由 AI 辅助完成。目前尚未完成 CFG 生命周期升级，也未向上游作为正式贡献提交；后续状态应按真实运行时与真机证据更新。
