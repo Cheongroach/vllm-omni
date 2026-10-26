@@ -1,61 +1,55 @@
 # LongCat-Next 源码讲解手稿
 
-## 开场
+这份手稿按理解顺序讲模型、请求状态、局部修复和后续问题。源码细节在[分析原稿](analysis.md)，实际测试在[验证阅读版](VALIDATION-friendly.md)。这里的适配版本固定为 #5299 `c90ebc1d07ba`。
 
-我关注的是“一个多模态模型如何进入持续批处理推理框架”。LongCat-Next 将图像和音频离散化，使同一个主干完成理解与生成；工程难点在于主干 KV cache 之外，还要维护码本深度预测、模态状态和反馈 embedding。
+## 模型如何处理图片和声音
 
-模型配置有 14 个复合 block、28 个 attention 模块；主干采用 MLA、Shortcut MoE 与 N-gram embedding。视觉和音频各有 4 层 depth head，每个位置预测 8 级 RVQ 码。标称约 3B 激活参数不能代表权重常驻显存，尤其存在大规模 N-gram 表。
+LongCat-Next 将图片、声音变成离散编号，让同一个主干处理文字与媒体。输入处理器计算媒体占据哪些输入位置；`embed_multimodal()` 将媒体编码并转换成向量，再放回对应的主干输入位置。
 
-## 第一段：输入与主干
+主干实现是 `FlashNgramModel`，复用 vLLM 的计算与历史缓存。它有 14 个复合 block、28 个 attention 模块，采用 MLA、Shortcut MoE 和 N-gram embedding。N-gram 查表需要每条请求的短历史；激活参数量不能直接代表完整权重的显存占用。
 
-先讲 `longcat_next_processor.py` 和音频 processor：输入媒体转换成 patch/grid 或音频特征，计算 placeholder 长度。`embed_multimodal()` 编码得到离散码，再合并码 embedding 放回主干输入位置。
+## 为什么一个生成位置需要 8 步
 
-接着讲 `FlashNgramModel`：Omni 复用原生 vLLM 主干、paged KV 与 TP。每请求 N-gram 短历史另由 preprocess 管理，多模态控制 token 是边界。这里要区分“模型结构对齐”和“运行时状态对齐”。
+文字通常生成一个 token，而一个图像或音频位置需要一组 RVQ 码。RVQ 用多个离散码逐级补充表示；深度预测网络每次预测一级，后一级读取前面已选中的码。
 
-## 第二段：生成有两个方向
+![一个位置内部的逐级预测依赖](figures/rvq-order.png)
 
-主干产生下一个空间/时间位置；depth head 在这个位置内部做：
+主干生成当前位置的表示 `h`，深度网络预测：
 
 `p(c0 | h), p(c1 | h,c0), …, p(c7 | h,c0,…,c6)`。
 
-Omni 用 `talker_mtp` 接入这个循环，但它不是 speculative decoding。可以跨请求批处理同一级计算，不能删除码本层级依赖。
+视觉与音频深度网络各有 4 层，“网络层数 4”和“码级数 8”描述不同对象。Omni 的 `talker_mtp` 承担这个循环，不是常见的投机解码。优化可以批量处理不同请求的同一级，仍要保留 8 级之间的依赖。
 
-读取 `preprocess → talker_mtp → model.forward → make_omni_output → compute_logits`。注意该 hook 读取保存的 hidden，并构造本轮输入 embedding；讲解时按实际调用顺序解释，不能把它直接画成普通 lm_head 的替换。
+阅读代码时再沿实际调用链检查 `preprocess → talker_mtp → model.forward → make_omni_output → compute_logits`。该 hook 会读取已保存的隐藏表示、构造本轮输入，不能简单看成普通输出层的替换。
 
-## 第三段：请求正确性
+## 生成的码为什么还要反馈
 
-模型除 KV cache 外还保存 `_ngram_ctx`、`_audio_gen`、`_visual_gen`。last_hidden、步数、past_codes、网格和输出 payload 都必须属于同一个 request。
+一组码有两种用途：交给解码器还原媒体，同时转换成向量供主干下一步使用。由此可见，保存了正确码还不够；下一步读到的反馈也必须正确。
 
-以“同一批里一条文本、一条音频、一条图像”为例：只把有帧请求压成一个 tensor 会丢失 batch 位置。当前 PR 改成逐请求 list 和空张量占位；logits 行则使用 runner 的真实请求顺序。
+个人 fork 的第一项修复处理两个问题。每一级码都要满足 `0 <= c_i < codebook_size_i`，因此每级都要排除额外特殊编号；保留帧即使第一级编号为 0，也要反馈视觉向量，因为 0 本来就是合法码。
 
-单条请求成功并不覆盖重排、空帧、取消或抢占。回归必须穿过真实 payload splitter，并另外验证 scheduler 行为。
+这里的错误可能污染反馈含义，但实际量化表存在额外物理行，不能称为必然数组越界。两项行为的确定性回归位于视觉修复提交 `b56c2a94b`。
 
-## 第四段：两个视觉修复
+## 同一批请求为什么不能按输出顺序猜编号
 
-第一，所有视觉码级别都应满足 `0 <= c_i < codebook_size_i`。当前 PR 只屏蔽第一级额外类，高层额外类可以进入输出；它们会破坏反馈语义。真实 VQ 表有额外物理行，不能夸大成必然越界崩溃。
+KV cache 保存主干计算历史；模型还维护 `_ngram_ctx`、`_audio_gen`、`_visual_gen`，分别保存短上下文和媒体生成状态。隐藏表示、已有码、图像网格及输出数据，都必须属于正确请求。
 
-第二，合法 code 0 不能当作“没有图片”。当前代码保存了该帧，却反馈文本 embedding。修复依据是 `frame_kept` 和码合法性，与码值是否为零无关。
+一批请求里可能有文字、音频和图像，而且只有部分请求本轮产生媒体。输出位置仍要与请求编号对齐。调查基线已改为逐请求列表、空输出占位，并使用运行时的真实 logits 行顺序；旧实现的对应问题不应再次当作未修缺陷。
 
-这两项适合先贡献：局部、明确、有稳定 CPU 回归，不必先重写整个 runner。
+取消、空帧和请求重排仍要穿过真实数据拆分和调度路径测试，单条请求成功不能替代这些场景。
 
-## 第五段：内存优化
+## 共享码表能省什么
 
-rank 0 的 depth head 不能独自调用 TP embedding collective，因此 replicated 码表有必要。但码表已经缓存后再 clone 成另一份 Embedding 没必要。
+深度网络有时只由 rank 0 访问码表；rank 是分布式进程编号。如果它独自调用需要所有进程参与的通信，可能造成等待，因此保留可独立读取的复制表有理由。
 
-共享只读 storage，并去掉 FP32 中间转换。BF16、hidden=3072 时，每份视觉码表是 `131072×3072×2 = 768 MiB`，音频是 `19456×3072×2 = 114 MiB`；合计重复存储 882 MiB/rank。
+但已经有一份缓存表，再为只读深度网络复制第二份，没有必要。提交 `53785219b` 让两处读取共享只读存储，并去掉 FP32 中间转换。
 
-旧 H20 allocator 实验支持这项局部存储差。它没有加载完整模型，不能描述成吞吐加速；当前 fork 仍需完整 GPU 复验。测试重点是全部小表数值、dtype、storage 指针、冻结和重复访问。
+BF16 每个数占 2 字节，向量维度为 3072 时，视觉表 `131072×3072×2 = 768 MiB`，音频表 `19456×3072×2 = 114 MiB`，合计 882 MiB/rank。它要求两表都已初始化；旧 H20 局部 allocator 实验不等于当前 fork 的完整模型性能验证。
 
-## 第六段：CFG 与性能路线
+## 下一步为什么先做 CFG 生命周期
 
-CFG 公式是 `uncond + s×(cond−uncond)`。真正困难的是两路必须在同一逻辑步采样并共享反馈。容量为两条请求不等于成对调度，缺配对降级普通采样会写入无法事后修复的 KV 历史。
+CFG 将有条件与无条件两路预测组合为 `u + s×(c−u)`。只有两路处于同一生成步、共享采样码和反馈，这个组合才符合预期。能同时放下两条请求，不代表调度器每轮都会一起推进它们。
 
-先持久化 pair 身份，再原子准入、同批调度、取消与恢复。随后 profiling 判断关键路径：head rank-0 等待、Python launch、broadcast、N-gram、decoder 共置。
+建议先记录配对身份、同时满足资源、同步推进并整对结束；再通过真实运行时和模型验证。详见[CFG 阅读版](https://github.com/Cheongroach/vllm-omni/blob/longcat-next/draft-cfg-lifecycle/planning/longcat-next/drafts/cfg-lifecycle-friendly.md)。
 
-优化顺序是正确性和质量基线 → 同一级跨请求 batch → 静态 buffer/graph → 必要的 head TP与 decoder 资源拆分。每项都同时检查质量、延迟和有效吞吐。
-
-## 面试时的证据边界
-
-可以说自己审查并修复了视觉码契约、保留合法 code 0，以及减少重复存储，并提供明确的回归和分支依赖。
-
-不能说“完成 LongCat-Next 三模态生产部署”“比 SGLang 更快”“支持 Ascend”，除非对应最新版本真机、质量、并发和故障实验已经完成。简历模板与后续验收见 `longcat-next/roadmap`。
+之后再用 profiling 查明等待、算子启动、码历史复制和解码资源竞争是否是瓶颈，决定批处理、计算图或阶段拆分。当前已完成的是局部修复与隔离 CPU 回归；尚不能说完成三模态生产部署、快于 SGLang 或支持 Ascend。

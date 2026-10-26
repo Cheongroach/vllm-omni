@@ -1,5 +1,7 @@
 # 分支与交接
 
+本文件保留 2026-10-25 早期交付的历史核对。此后已追加临时代码说明、CFG/组合草稿与阅读材料；当前工作状态先看[交接阅读版](HANDOFF-friendly.md)，远端 head 需用下文命令重新核对。
+
 更新：2026-10-25。目标 fork：`https://github.com/Cheongroach/vllm-omni`。
 
 ## 已完成
