@@ -1,5 +1,7 @@
 # [非正式小周报] vLLM-Omni 的硬件、模型与输入组合
 
+首次阅读可从[组合周报阅读版](weekly-2026-10-25-combinations-friendly.md)开始。本文件保留调查日志、完整设计和固定源码引用。
+
 > 记录日期：2026-10-25。状态：个人 fork 调查记录与改进设计，待审阅；不是正式 RFC、上游 PR 或已实现能力声明。本文由 AI 辅助调查和起草。
 >
 > 本次核对 main `dca119877bd420ee0abc117e637eeac7aa28e4dd`。LongCat-Next 的旧局部修复另在 `longcat-next/code`，其模型前置来自 #5299；不能把该分支能力算作当前 main 已支持。

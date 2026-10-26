@@ -1,17 +1,17 @@
-# [DRAFT / 非正式] LongCat-Next 审阅草稿
+# LongCat-Next 设计草稿：从哪里开始读
 
-> **DRAFT / 非正式：仅供仓库所有者审阅。不是正式 RFC、上游 PR 或已完成能力声明。**
+本目录保存在个人 fork，包含调查和未实施的设计。局部代码与复现脚本已上传，不代表 CFG 生命周期或组合改进已经完成。
 
-本目录位于个人 fork 的 `longcat-next/draft-cfg-lifecycle` 分支。包含设计文档、小周报和隔离调查脚本，生产代码与部署配置未改动。
+| 想理解的问题 | 先看阅读版 | 需要进一步审阅时 |
+| --- | --- | --- |
+| 卡、模型、输入为什么不能分别看支持 | [组合周报](weekly-2026-10-25-combinations-friendly.md) | [技术周报、日志与源码引用](weekly-2026-10-25-combinations.md) |
+| CFG 两路为什么必须一起推进 | [CFG 生命周期](cfg-lifecycle-friendly.md) | [资源公式、实施入口与验收](cfg-lifecycle.md) |
 
-- [CFG 生命周期升级方案](cfg-lifecycle.md)：实际复现、工程难点、拟实施范围和验收矩阵。
-- [2026-10-25 小周报：硬件、模型与输入组合](weekly-2026-10-25-combinations.md)：当前机制、已确认问题、处理日志和改进顺序。
-- [组合配置复现脚本](combinations_probe.py)：临时调查代码，仅验证源码配置和测试 helper，不代表 runtime/GPU 验收。
-- [既有 LongCat 临时代码说明](https://github.com/Cheongroach/vllm-omni/blob/longcat-next/code/planning/longcat-next/TEMPORARY_CODE.md)：局部修复已上传，CFG 升级和完整验收待完成。
+阅读版带 `-friendly`，先用例子解释原理；技术版保留细节供实现与审阅。两版使用同一组证据，阅读版没有增加新的性能或质量结论。
 
-请审阅优先目标、实现范围、兼容性取舍和验收条件，并反馈修改意见。草稿或调查脚本进入 Git 历史不代表生产能力已经完成。
+[组合复现脚本](combinations_probe.py) 检查生产配置与测试 helper 的卡数推导，不执行 GPU 模型。[临时代码说明](https://github.com/Cheongroach/vllm-omni/blob/longcat-next/code/planning/longcat-next/TEMPORARY_CODE.md) 解释两个旧局部修复，以及剩余整改。
 
-草稿状态：
+## 当前证据与工作状态
 
 | 项目 | 状态 |
 | --- | --- |
