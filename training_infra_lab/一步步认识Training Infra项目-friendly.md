@@ -2742,15 +2742,19 @@ OPD 是另一种训练信号来源。它仍然需要训练执行链，但使用�
 
 ---
 
-## 证据入口
+## 本地工作区中的可选证据路径
 
-完成本文后，再按需阅读：
+本文是独立教程。理解正文不依赖其他文档。
 
-- [Qwen3.5 测量报告](trajectory_runtime/measured-report-friendly.md)
-- [Miles 四卡实验脉络](posttraining_runtime/README-friendly.md)
-- [冷进程恢复结果](posttraining_runtime/grpo-recovery-v2-172e5c51/REPORT-friendly.md)
-- [32 卡训练结果](posttraining_runtime/scale32/REPORT-friendly.md)
-- [32 卡参数审计](posttraining_runtime/scale32/PARAMETER_AUDIT-friendly.md)
-- [OPD 方法与结果](opd/OPD_DESIGN_AND_INTERVIEW-friendly.md)
+完整实验工作区还保存了以下可选证据。它们没有包含在本次 GitHub 单文件提交中，因此这里使用路径而不是网页链接：
 
-这些文档用于查证实验数字和实现细节。第一次阅读本文时，不需要提前打开。
+```text
+training_infra_lab/trajectory_runtime/measured-report-friendly.md
+training_infra_lab/posttraining_runtime/README-friendly.md
+training_infra_lab/posttraining_runtime/grpo-recovery-v2-172e5c51/REPORT-friendly.md
+training_infra_lab/posttraining_runtime/scale32/REPORT-friendly.md
+training_infra_lab/posttraining_runtime/scale32/PARAMETER_AUDIT-friendly.md
+training_infra_lab/opd/OPD_DESIGN_AND_INTERVIEW-friendly.md
+```
+
+这些文件用于查证实验数字和实现细节。第一次阅读本文时，不需要打开。
